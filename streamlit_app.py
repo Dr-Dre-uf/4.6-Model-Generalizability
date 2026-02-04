@@ -3,11 +3,26 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import psutil
+import os
 from sklearn.model_selection import train_test_split, KFold, cross_val_score, StratifiedKFold, LeaveOneOut
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.utils import resample
+
+# --- MONITORING UTILITY ---
+def display_performance_monitor():
+    """Captures CPU and RAM usage for the generalizability sandbox."""
+    process = psutil.Process(os.getpid())
+    mem_mb = process.memory_info().rss / (1024 * 1024)
+    cpu_percent = process.cpu_percent(interval=0.1)
+    
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🖥️ Sandbox Performance")
+    c1, c2 = st.sidebar.columns(2)
+    c1.metric("CPU Load", f"{cpu_percent}%")
+    c2.metric("RAM Usage", f"{mem_mb:.1f} MB")
 
 # --- Page Configuration ---
 st.set_page_config(page_title="Model Generalizability Sandbox", layout="wide")
@@ -53,21 +68,25 @@ def load_and_preprocess_data():
     balanced = pd.concat([maj, min_over])
     return balanced.sample(n=200, random_state=42).reset_index(drop=True)
 
+# Initialize Sidebar
+st.sidebar.title("Generalizability Controls")
+display_performance_monitor()
+
 df = load_and_preprocess_data()
 
 # --- App UI ---
 st.title("Model Generalizability Sandbox")
-st.info("Instructions: Use the tabs below to explore how model complexity (k) and validation strategies impact a model's ability to predict patient mortality.")
+st.info("Instructions: Hover over the ( ? ) icons on any slider or input to learn more about the parameters.")
 
 tab1, tab2, tab3 = st.tabs(["Data Preview", "Overfitting and Underfitting", "Validation Strategies"])
 
 with tab1:
     st.subheader("Dataset Quick-Look")
-    st.markdown("We are using a balanced subset of the eICU Database focusing on 4 features: age, glucose, creatinine, and potassium.")
     st.dataframe(df.head(10), use_container_width=True)
 
 with tab2:
     st.header("The Bias-Variance Tradeoff")
+    
     
     features = ['age', 'lab_glucose', 'lab_creatinine', 'lab_potassium']
     X = df[features]
@@ -78,10 +97,10 @@ with tab2:
     X_test_s = scaler.transform(X_test)
 
     st.markdown("#### 1. Accuracy Curve")
-    st.caption("Instructions: Observe where the Train and Test lines start to pull apart. That gap represents overfitting.")
-    
-    k_max = st.slider("Select maximum k to test", 5, 50, 20, 
-                      help="Higher k values lead to simpler models. Lower k values lead to complex models.")
+    k_max = st.slider(
+        "Select maximum k to test", 5, 50, 20,
+        help="Complexity Range: We will test the model's accuracy for every value of k from 1 up to this number."
+    )
     
     ks = range(1, k_max + 1)
     train_acc, test_acc = [], []
@@ -100,11 +119,16 @@ with tab2:
 
     st.markdown("---")
     st.markdown("#### 2. Visualizing Decision Boundaries")
-    st.caption("Instructions: Compare a 'Complex' model (Low k) to a 'Simple' model (High k). Notice how k=1 tries to hug every single data point.")
     
     c1, c2 = st.columns(2)
-    k_low = c1.number_input("Complex Model (k)", 1, 5, 1, help="Low k is sensitive to noise.")
-    k_high = c2.number_input("Simple Model (k)", 10, 50, 15, help="High k smooths out the boundaries.")
+    k_low = c1.number_input(
+        "Complex Model (k)", 1, 5, 1, 
+        help="LOW k: The model follows the data points too closely. This usually causes high variance (Overfitting)."
+    )
+    k_high = c2.number_input(
+        "Simple Model (k)", 10, 50, 15, 
+        help="HIGH k: The model ignores local patterns to find a smoother trend. This can cause high bias (Underfitting)."
+    )
 
     def draw_boundary(k_val, ax, title):
         X_2d = X_train_s[:, :2] 
@@ -118,18 +142,23 @@ with tab2:
         ax.set_title(title)
 
     fig_b, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
-    draw_boundary(k_low, ax1, f"Overfitting (k={k_low})")
-    draw_boundary(k_high, ax2, f"Underfitting (k={k_high})")
+    draw_boundary(k_low, ax1, f"High Variance (k={k_low})")
+    draw_boundary(k_high, ax2, f"High Bias (k={k_high})")
     st.pyplot(fig_b)
 
 with tab3:
     st.header("Model Stability")
-    st.markdown("#### K-Fold Performance")
-    st.caption("Instructions: Adjust the folds to see how stable the model performance is across different slices of data.")
     
+    st.markdown("#### K-Fold Performance")
     col_cv1, col_cv2 = st.columns(2)
-    n_f = col_cv1.slider("Number of Folds", 2, 10, 5, help="Number of splits in K-Fold.")
-    k_cv = col_cv2.slider("Model Complexity (k)", 1, 20, 5, help="The n_neighbors for the CV test.")
+    n_f = col_cv1.slider(
+        "Number of Folds", 2, 10, 5, 
+        help="The dataset is split into this many pieces. Each piece gets a turn as the 'Test Set' while the others train the model."
+    )
+    k_cv = col_cv2.slider(
+        "Model Complexity (k)", 1, 20, 5, 
+        help="Choose the number of neighbors to use for this cross-validation test."
+    )
 
     knn_cv = KNeighborsClassifier(n_neighbors=k_cv)
     kf = KFold(n_splits=n_f, shuffle=True, random_state=42)
@@ -148,16 +177,19 @@ with tab3:
 
     st.markdown("---")
     st.markdown("#### Comparing Strategies")
-    st.caption("Instructions: See how the 'Mean Accuracy' changes when you use different validation techniques.")
     
     skf = StratifiedKFold(n_splits=n_f, shuffle=True, random_state=42)
     loo = LeaveOneOut()
     
-    with st.spinner("Calculating Leave-One-Out..."):
+    with st.spinner("Calculating LOO-CV (Training the model 200 times)..."):
         skf_s = cross_val_score(knn_cv, X_s, y, cv=skf)
         loo_s = cross_val_score(knn_cv, X_s, y, cv=loo)
 
     methods = ["K-Fold", "Stratified K-Fold", "LOO-CV"]
+    
+    # Tooltip-like explanation for the bar chart
+    st.help("LOO-CV (Leave-One-Out) is the most computationally expensive because it trains the model n times (where n = number of patients).")
+    
     means = [scores.mean(), skf_s.mean(), loo_s.mean()]
     sterr = [scores.std(), skf_s.std(), loo_s.std()]
 
