@@ -43,7 +43,6 @@ def load_clinical_data():
     df['in_hospital_mortality'] = df['hospitaldischargestatus'].map(lambda status: {'Alive': 0, 'Expired': 1}.get(status, np.nan))
     df = df.dropna(subset=['in_hospital_mortality'])
     
-    # Expose all numeric features for dynamic selection
     num_feats = ['age', 'admissionweight'] + ['lab_' + c.lower() for c in labnames]
     for col in num_feats: df[col] = pd.to_numeric(df[col], errors='coerce')
     df[num_feats] = df[num_feats].fillna(df[num_feats].mean())
@@ -106,8 +105,9 @@ else:
     default_feats = ['gene_x_expression', 'protein_y_level', 'culture_ph', 'temperature_c']
     target_pos, target_neg = "Apoptosis (Death)", "Survival"
 
-# Global session state for features
-if 'selected_features' not in st.session_state:
+# Fix: Reset session state features if the context changes
+if 'current_context' not in st.session_state or st.session_state.current_context != scientific_context:
+    st.session_state.current_context = scientific_context
     st.session_state.selected_features = default_feats
 
 # ==========================================
