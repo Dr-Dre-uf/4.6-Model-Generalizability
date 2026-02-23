@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import matplotlib.subplots as plt_subplots
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split, KFold, cross_val_score, StratifiedKFold, LeaveOneOut
@@ -10,10 +11,10 @@ from sklearn.metrics import accuracy_score
 from sklearn.utils import resample
 from sklearn.datasets import make_classification
 
-# --- Page Configuration ---
+# --- PAGE CONFIG ---
 st.set_page_config(page_title="Model Generalizability Sandbox", layout="wide")
 
-# --- Data Loading Functions ---
+# --- DATA LOADING FUNCTIONS ---
 @st.cache_data
 def load_clinical_data():
     patient_cols = ['patientunitstayid', 'hospitalid', 'gender', 'age', 'ethnicity', 'admissionheight', 
@@ -61,7 +62,6 @@ def load_foundational_data():
                                n_clusters_per_class=1, flip_y=0.1, random_state=42)
     features = ['gene_x_expression', 'protein_y_level', 'culture_ph', 'temperature_c']
     df = pd.DataFrame(X, columns=features)
-    # Scale synthetic data to look realistic
     df['gene_x_expression'] = (df['gene_x_expression'] * 10) + 50
     df['protein_y_level'] = (df['protein_y_level'] * 5) + 20
     df['culture_ph'] = (df['culture_ph'] * 0.5) + 7.4
@@ -70,41 +70,67 @@ def load_foundational_data():
     df['cellular_apoptosis'] = y
     return df, features, 'cellular_apoptosis'
 
-# --- Sidebar Configuration ---
-st.sidebar.title("Domain Selection")
-st.sidebar.info("Instructions: Select the domain context you want to explore.")
-track = st.sidebar.radio(
-    "Select Track:", 
+# --- SIDEBAR NAVIGATION & SETTINGS ---
+st.sidebar.title("Module Settings")
+scientific_context = st.sidebar.radio(
+    "Select Learning Context:", 
     ["Clinical (eICU)", "Foundational Science"],
-    help="Choose whether to predict patient mortality (Clinical) or cellular apoptosis (Foundational Science)."
+    help="Toggle the terminology and dataset to match your specific field of study."
+)
+
+st.sidebar.markdown("---")
+
+st.sidebar.title("Learning Activities")
+mode = st.sidebar.radio(
+    "Select an Activity:",
+    [
+        "Activity 1: Dataset Exploration", 
+        "Activity 2: The Bias-Variance Tradeoff", 
+        "Activity 3: Validation Strategies"
+    ],
+    help="Navigate through the interactive activities to explore model generalizability."
 )
 
 # Load context-specific data
-if track == "Clinical (eICU)":
+if scientific_context == "Clinical (eICU)":
     df, features, target = load_clinical_data()
     context_desc = "We are using a balanced subset of the eICU Database focusing on 4 features: age, glucose, creatinine, and potassium to predict in-hospital mortality."
 else:
     df, features, target = load_foundational_data()
     context_desc = "We are using a simulated foundational science dataset focusing on 4 features: gene expression, protein levels, culture pH, and temperature to predict cellular apoptosis."
 
-# --- App UI ---
-st.title("Model Generalizability Sandbox")
-st.info("Instructions: Use the tabs below to explore how model complexity (k) and validation strategies impact a model's ability to predict outcomes on unseen data.")
+# Base variables for models
+X = df[features]
+y = df[target]
 
-tab1, tab2, tab3 = st.tabs(["Data Preview", "Overfitting and Underfitting", "Validation Strategies"])
-
-# Tab 1: Data Preview
-with tab1:
-    st.subheader(f"Dataset Quick-Look: {track}")
+# ==========================================
+# ACTIVITY 1: DATASET EXPLORATION
+# ==========================================
+if mode == "Activity 1: Dataset Exploration":
+    st.title("Activity 1: Dataset Exploration")
+    
+    with st.expander("Activity Instructions", expanded=True):
+        st.write("""
+        1. Review the context description below to understand the features and target variable.
+        2. Inspect the first 10 rows of the processed dataset.
+        3. Note how the target variable is structured as a binary outcome (0 or 1).
+        """)
+        
     st.markdown(context_desc)
     st.dataframe(df.head(10), use_container_width=True)
 
-# Tab 2: Overfitting & Underfitting
-with tab2:
-    st.header("The Bias-Variance Tradeoff")
+# ==========================================
+# ACTIVITY 2: THE BIAS-VARIANCE TRADEOFF
+# ==========================================
+elif mode == "Activity 2: The Bias-Variance Tradeoff":
+    st.title("Activity 2: The Bias-Variance Tradeoff")
     
-    X = df[features]
-    y = df[target]
+    with st.expander("Activity Instructions", expanded=True):
+        st.write("""
+        1. Adjust the 'Test Set Size Ratio' slider to see how data volume impacts testing.
+        2. Adjust the 'maximum k' slider in the Accuracy Curve section. Observe where the Train and Test lines pull apart. That gap represents overfitting.
+        3. In the visualizer below, compare a 'Complex' model (Low k) to a 'Simple' model (High k) to see how decision boundaries physically change.
+        """)
     
     test_size_ratio = st.slider(
         "Select Test Set Size Ratio", 
@@ -118,8 +144,6 @@ with tab2:
     X_test_s = scaler.transform(X_test)
 
     st.markdown("#### 1. Accuracy Curve")
-    st.caption("Instructions: Observe where the Train and Test lines start to pull apart. The divergence indicates that the model is beginning to overfit the training data.")
-    
     k_max = st.slider(
         "Select maximum k to test", 
         5, 50, 20, 
@@ -143,7 +167,6 @@ with tab2:
 
     st.markdown("---")
     st.markdown("#### 2. Visualizing Decision Boundaries")
-    st.caption("Instructions: Compare a 'Complex' model (Low k) to a 'Simple' model (High k) using the first two features of your dataset. Notice how a k of 1 tries to draw boundaries around every single outlier.")
     
     c1, c2 = st.columns(2)
     k_low = c1.number_input("Complex Model (k)", 1, 5, 1, help="A low k value makes the model highly sensitive to noise in the training data.")
@@ -167,11 +190,20 @@ with tab2:
     draw_boundary(k_high, ax2, f"Underfitting (k={k_high})")
     st.pyplot(fig_b)
 
-# Tab 3: Validation Strategies
-with tab3:
-    st.header("Model Stability and Validation")
+# ==========================================
+# ACTIVITY 3: VALIDATION STRATEGIES
+# ==========================================
+elif mode == "Activity 3: Validation Strategies":
+    st.title("Activity 3: Model Stability and Validation")
+    
+    with st.expander("Activity Instructions", expanded=True):
+        st.write("""
+        1. Adjust the 'Number of Folds' slider to see how stable the model performance is across different slices of data. A wider boxplot indicates higher variance.
+        2. Adjust the 'Model Complexity' slider to see how complexity impacts validation stability.
+        3. Scroll down to observe how the Mean Accuracy and variance (error bars) change when using different validation techniques (K-Fold, Stratified K-Fold, LOO-CV) on the exact same model.
+        """)
+        
     st.markdown("#### K-Fold Performance Distribution")
-    st.caption("Instructions: Adjust the number of folds to see how stable the model performance is across different slices of data. A wider boxplot indicates higher variance.")
     
     col_cv1, col_cv2 = st.columns(2)
     n_f = col_cv1.slider(
@@ -202,7 +234,6 @@ with tab3:
 
     st.markdown("---")
     st.markdown("#### Comparing Validation Strategies")
-    st.caption("Instructions: Observe how the Mean Accuracy and variance (error bars) change when you use different validation techniques on the same model.")
     
     skf = StratifiedKFold(n_splits=n_f, shuffle=True, random_state=42)
     loo = LeaveOneOut()
