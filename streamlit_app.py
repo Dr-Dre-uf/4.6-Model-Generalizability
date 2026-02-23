@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.subplots as plt_subplots
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.model_selection import train_test_split, KFold, cross_val_score, StratifiedKFold, LeaveOneOut
@@ -293,7 +292,6 @@ elif mode == "Activity 4: The 'What-If' Simulator":
     
     st.subheader("Adjust Variables (First 3 Selected Features)")
     
-    # Take up to the first 3 features for the simulator
     sim_feats = st.session_state.selected_features[:3]
     synthetic_profile = np.zeros((1, len(st.session_state.selected_features)))
     
@@ -302,9 +300,7 @@ elif mode == "Activity 4: The 'What-If' Simulator":
         mean_val = df[feat].mean()
         std_val = df[feat].std()
         with cols[idx]:
-            # Allow user to adjust raw value, but we scale it under the hood
             val = st.slider(feat, float(df[feat].min()), float(df[feat].max()), float(mean_val))
-            # Standardize the raw input for the model
             synthetic_profile[0, idx] = (val - mean_val) / std_val
             
     prediction = knn_sim.predict(synthetic_profile)[0]
