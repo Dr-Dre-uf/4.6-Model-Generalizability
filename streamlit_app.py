@@ -82,7 +82,8 @@ mode = st.sidebar.radio(
     "Select an Activity:",
     [
         "Activity 1: Overfitting and Underfitting", 
-        "Activity 2: Cross-Validation Strategies"
+        "Activity 2: Hyperparameter Tuning",
+        "Activity 3: Cross-Validation Strategies"
     ],
     help="Navigate through the interactive activities to explore model generalizability."
 )
@@ -98,6 +99,13 @@ if 'current_context' not in st.session_state or st.session_state.current_context
     st.session_state.current_context = scientific_context
     st.session_state.selected_features = features
 
+X = df[st.session_state.selected_features]
+y = df[target]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+scaler = StandardScaler()
+X_train_s = scaler.fit_transform(X_train)
+X_test_s = scaler.transform(X_test)
+
 # ==========================================
 # ACTIVITY 1: OVERFITTING AND UNDERFITTING
 # ==========================================
@@ -106,41 +114,15 @@ if mode == "Activity 1: Overfitting and Underfitting":
     
     with st.expander("Activity Instructions", expanded=True):
         st.write("""
-        1. Adjust the 'maximum k' slider to generate the Accuracy Curve. Observe where the Train and Test lines pull apart (overfitting).
-        2. In the visualizer below, compare a 'Complex' model (Low k) to a 'Simple' model (High k) to see how decision boundaries physically change.
+        1. Compare a 'Complex' model (Low k) to a 'Simple' model (High k) using the inputs below.
+        2. Observe how the complex model attempts to draw boundaries around every single outlier, while the simple model draws a generalized regional boundary.
         """)
     
-    X = df[st.session_state.selected_features]
-    y = df[target]
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-    scaler = StandardScaler()
-    X_train_s = scaler.fit_transform(X_train)
-    X_test_s = scaler.transform(X_test)
-
-    st.markdown("#### Accuracy Curve")
-    k_max = st.slider("Select maximum k to test", 5, 50, 20)
-    
-    ks = range(1, k_max + 1)
-    train_acc, test_acc = [], []
-    for k in ks:
-        knn = KNeighborsClassifier(n_neighbors=k).fit(X_train_s, y_train)
-        train_acc.append(accuracy_score(y_train, knn.predict(X_train_s)))
-        test_acc.append(accuracy_score(y_test, knn.predict(X_test_s)))
-
-    fig_acc, ax_acc = plt.subplots(figsize=(8, 3))
-    ax_acc.plot(ks, train_acc, label='Train Accuracy', marker='o', color='#1f77b4')
-    ax_acc.plot(ks, test_acc, label='Test Accuracy', marker='x', color='#ff7f0e')
-    ax_acc.set_ylabel("Accuracy")
-    ax_acc.set_xlabel("Number of Neighbors (k)")
-    ax_acc.legend()
-    st.pyplot(fig_acc)
-
-    st.markdown("---")
     st.markdown("#### Visualizing Decision Boundaries (Top 2 Features)")
     
     c1, c2 = st.columns(2)
-    k_low = c1.number_input("Complex Model (k)", 1, 5, 1)
-    k_high = c2.number_input("Simple Model (k)", 10, 50, 15)
+    k_low = c1.number_input("Complex Model (k)", 1, 5, 1, help="A low k value makes the model highly sensitive to noise.")
+    k_high = c2.number_input("Simple Model (k)", 10, 50, 15, help="A high k value smooths out the boundaries.")
 
     def draw_boundary(k_val, ax, title):
         X_2d = X_train_s[:, :2] 
@@ -161,24 +143,51 @@ if mode == "Activity 1: Overfitting and Underfitting":
     st.pyplot(fig_b)
 
 # ==========================================
-# ACTIVITY 2: CROSS-VALIDATION STRATEGIES
+# ACTIVITY 2: HYPERPARAMETER TUNING
 # ==========================================
-elif mode == "Activity 2: Cross-Validation Strategies":
-    st.title("Activity 2: Cross-Validation Strategies")
+elif mode == "Activity 2: Hyperparameter Tuning":
+    st.title("Activity 2: Hyperparameter Tuning")
+    
+    with st.expander("Activity Instructions", expanded=True):
+        st.write("""
+        1. Adjust the 'maximum k' slider to generate the Accuracy Curve.
+        2. Observe where the Train and Test accuracy lines begin to separate. This divergence indicates the exact point where the model stops learning general rules and starts memorizing the training data.
+        """)
+
+    st.markdown("#### Accuracy Curve")
+    k_max = st.slider("Select maximum k to test", 5, 50, 20, help="Expanding the maximum k allows you to see where the model begins to underfit the data.")
+    
+    ks = range(1, k_max + 1)
+    train_acc, test_acc = [], []
+    for k in ks:
+        knn = KNeighborsClassifier(n_neighbors=k).fit(X_train_s, y_train)
+        train_acc.append(accuracy_score(y_train, knn.predict(X_train_s)))
+        test_acc.append(accuracy_score(y_test, knn.predict(X_test_s)))
+
+    fig_acc, ax_acc = plt.subplots(figsize=(8, 3))
+    ax_acc.plot(ks, train_acc, label='Train Accuracy', marker='o', color='#1f77b4')
+    ax_acc.plot(ks, test_acc, label='Test Accuracy', marker='x', color='#ff7f0e')
+    ax_acc.set_ylabel("Accuracy")
+    ax_acc.set_xlabel("Number of Neighbors (k)")
+    ax_acc.legend()
+    st.pyplot(fig_acc)
+
+# ==========================================
+# ACTIVITY 3: CROSS-VALIDATION STRATEGIES
+# ==========================================
+elif mode == "Activity 3: Cross-Validation Strategies":
+    st.title("Activity 3: Cross-Validation Strategies")
     
     with st.expander("Activity Instructions", expanded=True):
         st.write("""
         1. Adjust the 'Number of Folds' slider to see how stable the model performance is.
-        2. Observe the variance in the boxplot.
-        3. Compare K-Fold, Stratified K-Fold, and LOO-CV mean accuracies.
+        2. Observe the variance in the boxplot. A wide box indicates the model is highly sensitive to how the data is split.
+        3. Compare the mean accuracies and standard deviations of K-Fold, Stratified K-Fold, and LOO-CV.
         """)
         
-    X = df[st.session_state.selected_features]
-    y = df[target]
-        
     col_cv1, col_cv2 = st.columns(2)
-    n_f = col_cv1.slider("Number of Folds", 2, 10, 5)
-    k_cv = col_cv2.slider("Model Complexity (k)", 1, 20, 5)
+    n_f = col_cv1.slider("Number of Folds", 2, 10, 5, help="Controls how many subsets the data is split into during validation.")
+    k_cv = col_cv2.slider("Model Complexity (k)", 1, 20, 5, help="Sets the neighbor count for the model being validated.")
 
     knn_cv = KNeighborsClassifier(n_neighbors=k_cv)
     kf = KFold(n_splits=n_f, shuffle=True, random_state=42)
