@@ -121,8 +121,8 @@ if mode == "Activity 1: Overfitting and Underfitting":
     st.subheader("Visualizing Decision Boundaries (Top 2 Features)")
     
     c1, c2 = st.columns(2)
-    k_low = c1.number_input("Complex Model (k)", 1, 5, 1, help="A low k value makes the model highly sensitive to noise.")
-    k_high = c2.number_input("Simple Model (k)", 10, 50, 15, help="A high k value smooths out the boundaries.")
+    k_low = c1.number_input("Complex Model (k)", 1, 50, 1, help="A low k value makes the model highly sensitive to noise.")
+    k_high = c2.number_input("Simple Model (k)", 1, 50, 15, help="A high k value smooths out the boundaries.")
 
     def draw_boundary(k_val, ax, title):
         X_2d = X_train_s[:, :2] 
@@ -146,6 +146,7 @@ if mode == "Activity 1: Overfitting and Underfitting":
 
     with st.expander("Reveal Concept Summary"):
         st.write("Models with low k values create highly jagged decision boundaries, essentially memorizing the training data (overfitting). Models with high k values create smooth, broad boundaries, which may miss critical patterns (underfitting).")
+        
 
 # ==========================================
 # ACTIVITY 2: HYPERPARAMETER TUNING
@@ -181,6 +182,7 @@ elif mode == "Activity 2: Hyperparameter Tuning":
 
     with st.expander("Reveal Concept Summary"):
         st.write("The optimal hyperparameter is found just before the training and testing curves diverge significantly. A large gap between high training accuracy and low testing accuracy is the mathematical signature of overfitting.")
+        
 
 # ==========================================
 # ACTIVITY 3: CROSS-VALIDATION STRATEGIES
