@@ -88,10 +88,6 @@ mode = st.sidebar.radio(
     help="Navigate through the interactive activities to explore model generalizability."
 )
 
-st.sidebar.markdown("---")
-st.sidebar.title("Program Announcements")
-st.sidebar.info("The pre-experience survey will be available on Friday the 16th. There are 5 opportunities to earn $100 gift cards by completing surveys. Also, please prepare for the upcoming meet the faculty session.")
-
 if scientific_context == "Clinical (eICU)":
     df, features, target = load_clinical_data()
     context_desc = "Predicting in-hospital mortality using the eICU Database."
