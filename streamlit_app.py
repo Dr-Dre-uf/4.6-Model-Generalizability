@@ -68,7 +68,7 @@ def load_foundational_data():
     df['cellular_apoptosis'] = y
     return df, features, 'cellular_apoptosis'
 
-st.sidebar.title("Module Settings")
+st.sidebar.title("Module Navigation")
 scientific_context = st.sidebar.radio(
     "Select Learning Context:", 
     ["Clinical (eICU)", "Foundational Science"],
@@ -87,6 +87,10 @@ mode = st.sidebar.radio(
     ],
     help="Navigate through the interactive activities to explore model generalizability."
 )
+
+st.sidebar.markdown("---")
+st.sidebar.title("Program Announcements")
+st.sidebar.info("The pre-experience survey will be available on Friday the 16th. There are 5 opportunities to earn $100 gift cards by completing surveys. Also, please prepare for the upcoming meet the faculty session.")
 
 if scientific_context == "Clinical (eICU)":
     df, features, target = load_clinical_data()
@@ -118,7 +122,7 @@ if mode == "Activity 1: Overfitting and Underfitting":
         2. Observe how the complex model attempts to draw boundaries around every single outlier, while the simple model draws a generalized regional boundary.
         """)
     
-    st.markdown("#### Visualizing Decision Boundaries (Top 2 Features)")
+    st.subheader("Visualizing Decision Boundaries (Top 2 Features)")
     
     c1, c2 = st.columns(2)
     k_low = c1.number_input("Complex Model (k)", 1, 5, 1, help="A low k value makes the model highly sensitive to noise.")
@@ -131,8 +135,9 @@ if mode == "Activity 1: Overfitting and Underfitting":
         y_min, y_max = X_2d[:, 1].min() - 1, X_2d[:, 1].max() + 1
         xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1), np.arange(y_min, y_max, 0.1))
         Z = knn.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
-        ax.contourf(xx, yy, Z, alpha=0.3, cmap='RdBu')
-        ax.scatter(X_2d[:, 0], X_2d[:, 1], c=y_train, edgecolors='k', cmap='RdBu', s=30)
+        # Using cividis for colorblind-friendly contrast
+        ax.contourf(xx, yy, Z, alpha=0.8, cmap='cividis')
+        ax.scatter(X_2d[:, 0], X_2d[:, 1], c=y_train, edgecolors='white', cmap='cividis', s=40, linewidths=0.5)
         ax.set_title(title)
         ax.set_xlabel(st.session_state.selected_features[0])
         ax.set_ylabel(st.session_state.selected_features[1])
@@ -141,6 +146,10 @@ if mode == "Activity 1: Overfitting and Underfitting":
     draw_boundary(k_low, ax1, f"Overfitting (k={k_low})")
     draw_boundary(k_high, ax2, f"Underfitting (k={k_high})")
     st.pyplot(fig_b)
+    st.caption("Colorblind-accessible contour plot displaying model decision boundaries. Yellow regions predict one class outcome, while dark blue regions predict the other. White-outlined dots represent individual patient or cell sample data points.")
+
+    with st.expander("Reveal Concept Summary"):
+        st.write("Models with low k values create highly jagged decision boundaries, essentially memorizing the training data (overfitting). Models with high k values create smooth, broad boundaries, which may miss critical patterns (underfitting).")
 
 # ==========================================
 # ACTIVITY 2: HYPERPARAMETER TUNING
@@ -154,7 +163,7 @@ elif mode == "Activity 2: Hyperparameter Tuning":
         2. Observe where the Train and Test accuracy lines begin to separate. This divergence indicates the exact point where the model stops learning general rules and starts memorizing the training data.
         """)
 
-    st.markdown("#### Accuracy Curve")
+    st.subheader("Accuracy Curve")
     k_max = st.slider("Select maximum k to test", 5, 50, 20, help="Expanding the maximum k allows you to see where the model begins to underfit the data.")
     
     ks = range(1, k_max + 1)
@@ -164,13 +173,18 @@ elif mode == "Activity 2: Hyperparameter Tuning":
         train_acc.append(accuracy_score(y_train, knn.predict(X_train_s)))
         test_acc.append(accuracy_score(y_test, knn.predict(X_test_s)))
 
+    # High contrast line colors
     fig_acc, ax_acc = plt.subplots(figsize=(8, 3))
-    ax_acc.plot(ks, train_acc, label='Train Accuracy', marker='o', color='#1f77b4')
-    ax_acc.plot(ks, test_acc, label='Test Accuracy', marker='x', color='#ff7f0e')
+    ax_acc.plot(ks, train_acc, label='Train Accuracy', marker='o', color='#00204c')
+    ax_acc.plot(ks, test_acc, label='Test Accuracy', marker='x', color='#ffe945')
     ax_acc.set_ylabel("Accuracy")
     ax_acc.set_xlabel("Number of Neighbors (k)")
     ax_acc.legend()
     st.pyplot(fig_acc)
+    st.caption("Line graph comparing model accuracy on training data versus testing data across different values of k. The dark blue line represents training accuracy, and the yellow line represents testing accuracy.")
+
+    with st.expander("Reveal Concept Summary"):
+        st.write("The optimal hyperparameter is found just before the training and testing curves diverge significantly. A large gap between high training accuracy and low testing accuracy is the mathematical signature of overfitting.")
 
 # ==========================================
 # ACTIVITY 3: CROSS-VALIDATION STRATEGIES
@@ -195,12 +209,13 @@ elif mode == "Activity 3: Cross-Validation Strategies":
     scores = cross_val_score(knn_cv, X_s, y, cv=kf)
 
     fig_cv, ax_cv = plt.subplots(figsize=(8, 3))
-    sns.boxplot(x=scores, color="#4c72b0", ax=ax_cv)
-    sns.stripplot(x=scores, color="black", size=8, jitter=True, ax=ax_cv)
+    sns.boxplot(x=scores, color="#00204c", ax=ax_cv)
+    sns.stripplot(x=scores, color="#ffe945", size=8, jitter=True, ax=ax_cv, edgecolor='gray', linewidth=1)
     ax_cv.set_title(f"Accuracy Distribution ({n_f} Folds)")
     st.pyplot(fig_cv)
+    st.caption("Boxplot displaying the spread of accuracy scores across multiple data folds. Wider boxes indicate greater instability in the model's performance.")
 
-    st.markdown("#### Comparing Validation Strategies")
+    st.subheader("Comparing Validation Strategies")
     skf = StratifiedKFold(n_splits=n_f, shuffle=True, random_state=42)
     loo = LeaveOneOut()
     
@@ -213,7 +228,12 @@ elif mode == "Activity 3: Cross-Validation Strategies":
     sterr = [scores.std(), skf_s.std(), loo_s.std()]
 
     fig_bar, ax_bar = plt.subplots(figsize=(8, 3))
-    ax_bar.bar(methods, means, yerr=sterr, capsize=10, color=['#1f77b4', '#2ca02c', '#d62728'], alpha=0.8)
+    # Using high contrast accessible colors for the bar chart
+    ax_bar.bar(methods, means, yerr=sterr, capsize=10, color=['#00204c', '#575c6d', '#ffe945'], alpha=0.9)
     ax_bar.set_ylim(0, 1.1)
     ax_bar.set_ylabel("Mean Accuracy")
     st.pyplot(fig_bar)
+    st.caption("Bar chart comparing the mean accuracy of K-Fold, Stratified K-Fold, and Leave-One-Out cross-validation. Error bars represent the standard deviation of scores.")
+
+    with st.expander("Reveal Concept Summary"):
+        st.write("Stratified K-Fold is generally preferred for biomedical datasets as it ensures the ratio of positive to negative outcomes remains consistent across all test folds. LOO-CV provides an unbiased estimate but at a high computational cost and potentially high variance.")
