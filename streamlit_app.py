@@ -78,6 +78,8 @@ scientific_context = st.sidebar.radio(
 st.sidebar.markdown("---")
 
 st.sidebar.title("Learning Activities")
+st.sidebar.info("Use the menu below to navigate between the three different activities in this module.")
+
 mode = st.sidebar.radio(
     "Select an Activity:",
     [
@@ -116,6 +118,7 @@ if mode == "Activity 1: Overfitting and Underfitting":
         st.write("""
         1. Compare a 'Complex' model (Low k) to a 'Simple' model (High k) using the inputs below.
         2. Observe how the complex model attempts to draw boundaries around every single outlier, while the simple model draws a generalized regional boundary.
+        3. Use the sidebar on the left to navigate to Activity 2 when you are ready.
         """)
     
     st.subheader("Visualizing Decision Boundaries (Top 2 Features)")
@@ -131,7 +134,7 @@ if mode == "Activity 1: Overfitting and Underfitting":
         y_min, y_max = X_2d[:, 1].min() - 1, X_2d[:, 1].max() + 1
         xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1), np.arange(y_min, y_max, 0.1))
         Z = knn.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
-        # Using cividis for colorblind-friendly contrast
+        
         ax.contourf(xx, yy, Z, alpha=0.8, cmap='cividis')
         ax.scatter(X_2d[:, 0], X_2d[:, 1], c=y_train, edgecolors='white', cmap='cividis', s=40, linewidths=0.5)
         ax.set_title(title)
@@ -146,7 +149,6 @@ if mode == "Activity 1: Overfitting and Underfitting":
 
     with st.expander("Reveal Concept Summary"):
         st.write("Models with low k values create highly jagged decision boundaries, essentially memorizing the training data (overfitting). Models with high k values create smooth, broad boundaries, which may miss critical patterns (underfitting).")
-        
 
 # ==========================================
 # ACTIVITY 2: HYPERPARAMETER TUNING
@@ -158,6 +160,7 @@ elif mode == "Activity 2: Hyperparameter Tuning":
         st.write("""
         1. Adjust the 'maximum k' slider to generate the Accuracy Curve.
         2. Observe where the Train and Test accuracy lines begin to separate. This divergence indicates the exact point where the model stops learning general rules and starts memorizing the training data.
+        3. Use the sidebar on the left to navigate to Activity 3 when you are ready.
         """)
 
     st.subheader("Accuracy Curve")
@@ -170,7 +173,6 @@ elif mode == "Activity 2: Hyperparameter Tuning":
         train_acc.append(accuracy_score(y_train, knn.predict(X_train_s)))
         test_acc.append(accuracy_score(y_test, knn.predict(X_test_s)))
 
-    # High contrast line colors
     fig_acc, ax_acc = plt.subplots(figsize=(8, 3))
     ax_acc.plot(ks, train_acc, label='Train Accuracy', marker='o', color='#00204c')
     ax_acc.plot(ks, test_acc, label='Test Accuracy', marker='x', color='#ffe945')
@@ -182,7 +184,6 @@ elif mode == "Activity 2: Hyperparameter Tuning":
 
     with st.expander("Reveal Concept Summary"):
         st.write("The optimal hyperparameter is found just before the training and testing curves diverge significantly. A large gap between high training accuracy and low testing accuracy is the mathematical signature of overfitting.")
-        
 
 # ==========================================
 # ACTIVITY 3: CROSS-VALIDATION STRATEGIES
@@ -226,7 +227,6 @@ elif mode == "Activity 3: Cross-Validation Strategies":
     sterr = [scores.std(), skf_s.std(), loo_s.std()]
 
     fig_bar, ax_bar = plt.subplots(figsize=(8, 3))
-    # Using high contrast accessible colors for the bar chart
     ax_bar.bar(methods, means, yerr=sterr, capsize=10, color=['#00204c', '#575c6d', '#ffe945'], alpha=0.9)
     ax_bar.set_ylim(0, 1.1)
     ax_bar.set_ylabel("Mean Accuracy")
